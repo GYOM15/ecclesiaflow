@@ -1,0 +1,783 @@
+openapi: 3.0.3
+info:
+  title: EcclesiaFlow Authentication API
+  description: |
+    API d'authentification et de gestion des utilisateurs pour un système de gestion d'églises en mode multi-tenant.
+    Une église s'enregistre d'abord, puis peut créer et administrer ses propres utilisateurs avec des rôles spécifiques.
+  version: 1.0.0
+  contact:
+    email: support@ecclesiaflow.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.ecclesiaflow.com/v1
+    description: Production Server
+  - url: https://staging.ecclesiaflow.com/v1
+    description: Staging Server
+
+tags:
+  - name: Church Registration
+    description: Endpoints pour l'enregistrement et la gestion des églises
+  - name: Authentication
+    description: Endpoints d'authentification pour les utilisateurs d'église
+  - name: User Management
+    description: Endpoints pour la gestion des utilisateurs d'une église
+  - name: Security
+    description: Endpoints liés à la sécurité et à la gestion des sessions
+  - name: Church Administration
+    description: Endpoints administratifs spécifiques à une église
+
+paths:
+  # Enregistrement d'une église
+  /churches/register:
+    post:
+      tags:
+        - Church Registration
+      summary: Enregistrer une nouvelle église
+      operationId: registerChurch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChurchRegisterRequest'
+            examples:
+              validRequest:
+                summary: Demande d'enregistrement valide
+                value:
+                  name: "Église de la Grâce"
+                  email: "contact@eglisegrace.com"
+                  password: "P@ssw0rd2024!"
+                  phoneNumber: "+1 123 456 8789"
+                  address:
+                    street: "123 Rue de la Foi"
+                    city: "Montréal"
+                    state: "Québec"
+                    zipCode: "H4H 3C4"
+                    country: "Canada"
+      responses:
+        '201':
+          description: Église enregistrée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChurchRegisterResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: L'église existe déjà
+
+  # Authentification des utilisateurs d'église
+  /churches/{churchId}/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Connexion d'un utilisateur d'église
+      operationId: churchLoginUser
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              validLogin:
+                summary: Demande de connexion valide
+                value:
+                  email: "user@eglisegrace.com"
+                  password: "P@ssw0rd2024!"
+                  mfaCode: "123456"
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '423':
+          description: Compte bloqué
+
+  /churches/{churchId}/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Déconnexion d'un utilisateur d'église
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+      responses:
+        '200':
+          description: Déconnexion réussie
+        '401':
+          description: Non autorisé
+
+  /churches/{churchId}/auth/refresh-token:
+    post:
+      tags:
+        - Authentication
+      summary: Rafraîchir le token d'accès pour un utilisateur d'église
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token rafraîchi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Refresh token invalide
+
+  /churches/{churchId}/auth/password/reset:
+    post:
+      tags:
+        - Security
+      summary: Demander une réinitialisation de mot de passe pour un utilisateur d'église
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Adresse email associée au compte utilisateur.
+                  example: "user@eglisegrace.com"
+      responses:
+        '200':
+          description: Email de réinitialisation envoyé
+        '404':
+          description: Email non trouvé
+
+  /churches/{churchId}/auth/password/reset/{token}:
+    post:
+      tags:
+        - Security
+      summary: Réinitialiser le mot de passe avec un token pour un utilisateur d'église
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Token reçu par email de réinitialisation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newPassword:
+                  type: string
+                  format: password
+                  description: Nouveau mot de passe pour le compte.
+                  example: "NewP@ssw0rd2024!"
+      responses:
+        '200':
+          description: Réinitialisation du mot de passe réussie
+        '400':
+          description: Token invalide
+
+  /churches/{churchId}/auth/password/change:
+    post:
+      tags:
+        - Security
+      security:
+        - BearerAuth: []
+      summary: Changer le mot de passe d'un utilisateur d'église
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Mot de passe modifié
+        '400':
+          description: Mot de passe invalide
+        '401':
+          description: Non autorisé
+
+  /churches/{churchId}/auth/mfa/setup:
+    post:
+      tags:
+        - Security
+      security:
+        - BearerAuth: []
+      summary: Configurer la MFA pour un utilisateur d'église
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+      responses:
+        '200':
+          description: Configuration MFA réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MFASetupResponse'
+
+  /churches/{churchId}/auth/mfa/verify:
+    post:
+      tags:
+        - Security
+      summary: Vérifier le code MFA pour un utilisateur d'église
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MFAVerifyRequest'
+      responses:
+        '200':
+          description: Vérification MFA réussie
+        '400':
+          description: Code invalide
+
+  # Gestion des utilisateurs d'une église
+  /churches/{churchId}/users:
+    get:
+      tags:
+        - User Management
+      security:
+        - BearerAuth: []
+      summary: Lister les utilisateurs d'une église
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Numéro de page à récupérer (défaut 1)
+          example: 1
+        - name: size
+          in: query
+          schema:
+            type: integer
+          description: Nombre d'enregistrements par page (défaut 10)
+          example: 10
+        - name: role
+          in: query
+          schema:
+            type: string
+          description: Filtrer par rôle (ex. MEMBER, PASTOR)
+          example: "MEMBER"
+      responses:
+        '200':
+          description: Liste des utilisateurs récupérée
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChurchUserProfile'
+        '403':
+          description: Accès refusé – rôle insuffisant
+
+    post:
+      tags:
+        - Church Administration
+      security:
+        - BearerAuth: []
+      summary: Créer un nouvel utilisateur pour l'église
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChurchUserCreationRequest'
+      responses:
+        '201':
+          description: Utilisateur créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChurchUserProfile'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          description: Accès refusé – rôle insuffisant
+
+  /churches/{churchId}/users/{userId}:
+    put:
+      tags:
+        - User Management
+      security:
+        - BearerAuth: []
+      summary: Mettre à jour le profil d'un utilisateur d'une église
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChurchUserProfile'
+      responses:
+        '200':
+          description: Profil mis à jour avec succès
+
+  /churches/{churchId}/users/{userId}/photo:
+    post:
+      tags:
+        - User Management
+      security:
+        - BearerAuth: []
+      summary: Télécharger la photo de profil d'un utilisateur d'une église
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'utilisateur
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: Fichier image de la photo de profil.
+      responses:
+        '200':
+          description: Photo téléchargée avec succès
+
+  /churches/{churchId}/users/sessions:
+    get:
+      tags:
+        - Security
+      security:
+        - BearerAuth: []
+      summary: Lister les sessions actives d'un utilisateur d'une église
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+      responses:
+        '200':
+          description: Sessions récupérées
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Session'
+    delete:
+      tags:
+        - Security
+      security:
+        - BearerAuth: []
+      summary: Terminer toutes les sessions d'un utilisateur d'une église
+      parameters:
+        - name: churchId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifiant unique de l'église
+      responses:
+        '200':
+          description: Toutes les sessions ont été terminées
+
+components:
+  responses:
+    ValidationError:
+      description: Erreur de validation
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: string
+                enum:
+                  - INVALID_EMAIL_FORMAT
+                  - PASSWORD_TOO_WEAK
+                  - REQUIRED_FIELD_MISSING
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: string
+          example:
+            code: "PASSWORD_TOO_WEAK"
+            message: "Le mot de passe ne répond pas aux exigences de sécurité"
+            details:
+              - "Le mot de passe doit contenir au moins une lettre majuscule"
+              - "Le mot de passe doit contenir au moins un caractère spécial"
+    AuthenticationError:
+      description: Erreur d'authentification
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: string
+                enum:
+                  - INVALID_CREDENTIALS
+                  - MFA_REQUIRED
+              message:
+                type: string
+          example:
+            code: "INVALID_CREDENTIALS"
+            message: "Email ou mot de passe invalide"
+    BusinessError:
+      description: Erreur de logique métier
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: string
+                enum:
+                  - USER_ALREADY_EXISTS
+                  - ROLE_NOT_ALLOWED
+              message:
+                type: string
+          example:
+            code: "USER_ALREADY_EXISTS"
+            message: "Un utilisateur avec cet email existe déjà"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+
+  schemas:
+    PasswordValidation:
+      type: object
+      properties:
+        password:
+          type: string
+          format: password
+          pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$"
+          description: |
+            Le mot de passe doit contenir :
+            - Au moins 8 caractères
+            - Au moins une lettre majuscule
+            - Au moins une lettre minuscule
+            - Au moins un chiffre
+            - Au moins un caractère spécial (@$!%*?&)
+          example: "P@ssw0rd2024!"
+
+    ChurchRegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          example: "Église de la Grâce"
+        email:
+          type: string
+          format: email
+          example: "contact@eglisegrace.com"
+        password:
+          $ref: '#/components/schemas/PasswordValidation/properties/password'
+        phoneNumber:
+          type: string
+          pattern: "^\\+[1-9]\\d{1,14}$"
+          example: "+1 123 456 8789"
+        address:
+          $ref: '#/components/schemas/Address'
+
+    ChurchRegisterResponse:
+      type: object
+      properties:
+        churchId:
+          type: string
+        message:
+          type: string
+        verificationToken:
+          type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        mfaCode:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+        mfaRequired:
+          type: boolean
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+
+    ChurchUserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        churchId:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phoneNumber:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+        role:
+          type: string
+          enum:
+            - MEMBER
+            - DEACON
+            - ELDER
+            - PASTOR
+            - ADMIN
+        ministries:
+          type: array
+          items:
+            type: string
+        groups:
+          type: array
+          items:
+            type: string
+        joinDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - BLOCKED
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        country:
+          type: string
+
+    UserPreferences:
+      type: object
+      properties:
+        language:
+          type: string
+        notifications:
+          type: boolean
+        theme:
+          type: string
+        emailSubscriptions:
+          type: array
+          items:
+            type: string
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+        deviceInfo:
+          type: string
+        ipAddress:
+          type: string
+        lastActive:
+          type: string
+          format: date-time
+        location:
+          type: string
+
+    MFASetupResponse:
+      type: object
+      properties:
+        secretKey:
+          type: string
+        qrCodeUrl:
+          type: string
+
+    MFAVerifyRequest:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+
+    ChurchUserCreationRequest:
+      type: object
+      required:
+        - email
+        - password
+        - firstName
+        - lastName
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@eglisegrace.com"
+        password:
+          type: string
+          format: password
+          example: "P@ssw0rd2024!"
+        firstName:
+          type: string
+          example: "Jean"
+        lastName:
+          type: string
+          example: "Dupont"
+        phoneNumber:
+          type: string
+          pattern: "^\\+[1-9]\\d{1,14}$"
+          example: "+1 123 456 8789"
+        role:
+          type: string
+          enum:
+            - MEMBER
+            - DEACON
+            - ELDER
+            - PASTOR
+            - ADMIN
+          example: "ADMIN"
