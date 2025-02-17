@@ -1,20 +1,20 @@
 openapi: 3.0.3
 info:
   contact:
-    email: support@churchmanagement.com
+    email: support@ecclesiaflow.com
   description: |
     API d'authentification et de gestion des utilisateurs pour un système de gestion d'églises en mode multi-tenant.
     Une église s'enregistre d'abord, puis peut créer et administrer ses propres utilisateurs avec des rôles spécifiques.
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
-  title: Church Management Authentication API
+  title: EcclesiaFlow Authentication API
   version: 1.0.0
 servers:
 - description: Production Server
-  url: https://api.churchmanagement.com/v1
+  url: https://api.ecclesiaflow.com/v1
 - description: Staging Server
-  url: https://staging.churchmanagement.com/v1
+  url: https://staging.ecclesiaflow.com/v1
 tags:
 - description: Endpoints pour l'enregistrement et la gestion des églises
   name: Church Registration
@@ -43,10 +43,10 @@ paths:
                   phoneNumber: +1 123 456 8789
                   address:
                     street: 123 Rue de la Foi
-                    city: Paris
-                    state: Île-de-France
-                    zipCode: "75000"
-                    country: France
+                    city: Montréal
+                    state: Québec
+                    zipCode: H4H 3C4
+                    country: Canada
             schema:
               $ref: '#/components/schemas/ChurchRegisterRequest'
         required: true
