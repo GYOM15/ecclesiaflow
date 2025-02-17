@@ -1,6 +1,6 @@
 # ChurchRegistrationApi
 
-All URIs are relative to *https://api.ecclesiaflow.com/v1*
+All URIs are relative to *https://api.churchmanagement.com/v1*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
@@ -25,7 +25,7 @@ import org.openapitools.client.api.ChurchRegistrationApi;
 public class Example {
   public static void main(String[] args) {
     ApiClient defaultClient = Configuration.getDefaultApiClient();
-    defaultClient.setBasePath("https://api.ecclesiaflow.com/v1");
+    defaultClient.setBasePath("https://api.churchmanagement.com/v1");
 
     ChurchRegistrationApi apiInstance = new ChurchRegistrationApi(defaultClient);
     ChurchRegisterRequest churchRegisterRequest = new ChurchRegisterRequest(); // ChurchRegisterRequest | 

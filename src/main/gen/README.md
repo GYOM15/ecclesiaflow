@@ -1,8 +1,8 @@
 # openapi-java-client
 
-EcclesiaFlow Authentication API
+Church Management Authentication API
 - API version: 1.0.0
-  - Build date: 2025-02-17T12:34:53.188813-05:00[America/Montreal]
+  - Build date: 2025-02-17T11:45:52.556339-05:00[America/Montreal]
   - Generator version: 7.7.0
 
 API d'authentification et de gestion des utilisateurs pour un système de gestion d'églises en mode multi-tenant.
@@ -92,7 +92,7 @@ import org.openapitools.client.api.AuthenticationApi;
 public class Example {
   public static void main(String[] args) {
     ApiClient defaultClient = Configuration.getDefaultApiClient();
-    defaultClient.setBasePath("https://api.ecclesiaflow.com/v1");
+    defaultClient.setBasePath("https://api.churchmanagement.com/v1");
 
     AuthenticationApi apiInstance = new AuthenticationApi(defaultClient);
     String churchId = "churchId_example"; // String | Identifiant unique de l'église
@@ -114,7 +114,7 @@ public class Example {
 
 ## Documentation for API Endpoints
 
-All URIs are relative to *https://api.ecclesiaflow.com/v1*
+All URIs are relative to *https://api.churchmanagement.com/v1*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
@@ -174,5 +174,5 @@ It's recommended to create an instance of `ApiClient` per thread in a multithrea
 
 ## Author
 
-support@ecclesiaflow.com
+support@churchmanagement.com
 
